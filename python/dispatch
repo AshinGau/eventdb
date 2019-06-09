@@ -1,0 +1,19 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+import os, shutil, sys
+
+os.chdir(sys.argv[1])
+pwd = os.getcwd()
+file_list = os.listdir(pwd)
+run_list = {}
+for each in file_list:
+	this_run = each.split("_")[2]
+	if this_run not in run_list:
+		run_list[this_run] = [each]
+	else:
+		run_list[this_run].append(each)
+for each in run_list:
+	os.mkdir(each)
+	for each_file in run_list[each]:
+		shutil.move(each_file, each)

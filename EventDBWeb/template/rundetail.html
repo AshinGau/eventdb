@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block scriptBody %}
+	<script src="static/ui/echarts.common.min.js"></script>
+	<script src="static/ui/wonderland.js"></script>
+	<script>
+		var barOptionTemp = {
+			title: {
+				textStyle: {
+					fontSize: 14
+				}
+			},
+			tooltip: {
+				trigger: 'axis',
+				axisPointer: {
+					type: 'shadow'
+				}
+			},
+			dataZoom: [{type: 'inside'}],
+			legend: {},
+			grid: {
+				top: 60,
+				left: 5,
+				right:  60,
+				bottom: 20,
+				containLabel: true
+			},
+			xAxis: [
+				{
+					type: 'category',
+					name: '属性值',
+					axisTick: {
+						alignWithLabel: true
+					}
+				}
+			],
+			yAxis: [
+				{
+					type: 'value',
+					name: '事例数'
+				}
+			]
+		};
+		function loadRunsChart(property) {
+			if(window.runsChart)
+				window.runsChart.dispose();
+			var runsChart = echarts.init(document.getElementById('echartArea'), 'wonderland');
+			window.runsChart = runsChart;
+			var barOption = $.extend(true, {}, barOptionTemp),
+				tablename = $.cookie('tablename'),
+				runs = $.cookie('runs');
+			$('#runIDs').text(runs);
+			$('#tableName').text(tablename);
+			barOption.title.text = '属性' + property + '值 - 事例数量柱状图';
+			runsChart.showLoading();
+			$.ajax({
+				type: 'get',
+				url: 'detail',
+				data: {
+					tablename: tablename,
+					runs: runs,
+					property: property
+				},
+				dataType: 'json',
+				success: function (data) {
+					if(property.startsWith('Beam')){
+						barOption.xAxis[0].name = 'Run号';
+						barOption.yAxis[0].name = '属性值';
+						barOption.title.text = '属性' + property + '在各个run的大小情况';
+						barOption.series = [];
+						var xval = [],
+							yval = [];
+						for(var key in data){
+							xval.push(key);
+							yval.push(data[key][0].value)
+						}
+						barOption.series.push({
+							type: 'bar',
+							//barWidth: '30%',
+							data: yval
+						});
+						barOption.xAxis[0].data = xval;
+						runsChart.hideLoading();
+						runsChart.setOption(barOption);
+					}else{
+						var legendData = [];
+						barOption.series = [];
+						var valarr = [];
+						for (var key in data)
+							for (var obj of data[key])
+								valarr.push(obj.value);
+						valarr.sort();
+						var xmin = valarr[0],
+							xmax = valarr.pop(),
+							xval = [];
+						for (var i = xmin; i <= xmax; i++)
+							xval.push(String(i));
+						for (var key in data) {
+							legendData.push(key);
+							var sdata = []
+							for (var i = 0; i <= xmax - xmin; i++)
+								sdata[i] = 0;
+							for (var obj of data[key]) {
+								sdata[obj.value] = obj.count
+							}
+							barOption.series.push({
+								name: key,
+								type: 'bar',
+								//barWidth: '30%',
+								data: sdata
+							});
+						}
+						barOption.xAxis[0].data = xval;
+						barOption.legend = {
+							data: legendData
+						}
+						runsChart.hideLoading();
+						runsChart.setOption(barOption);
+					}
+				}
+			});
+		}
+		layui.use(['layer', 'form', 'element'], function () {
+			var layer = layui.layer,
+				form = layui.form,
+				element = layui.element;
+			form.on('select', function(data){
+				loadRunsChart(data.value);
+			});
+		});
+		$(function () {
+			loadRunsChart('NTracks');
+		});
+	</script>
+{% endblock %}
+
+{% block mainBody %}
+	<div class="layui-container" style="padding-bottom: 50px;">
+		<table class="layui-table">
+			<thead>
+				<tr>
+					<th width="100">项目</th>
+					<th>值</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>Run(s)号</td>
+					<td id="runIDs"></td>
+				</tr>
+				<tr>
+					<td>数据表</td>
+					<td id="tableName"></td>
+				</tr>
+				<tr>
+					<td>PROPERTY</td>
+					<td>
+						<form class="layui-form" action="">
+							<div class="layui-form-item" style="margin-bottom: 0px;">
+								<div class="layui-input-inline">
+									<select id="propertyName" name="propertyName" lay-verify="required">
+										<option value="NTracks">NTracks</option>
+										<option value="NShowes">NShowes</option>
+										<option value="Nlambda">Nlambda</option>
+										<option value="Nalambda">Nalambda</option>
+										<option value="Nmup">Nmup</option>
+										<option value="Nmum">Nmum</option>
+										<option value="Nep">Nep</option>
+										<option value="Nem">Nem</option>
+										<option value="Npp">Npp</option>
+										<option value="Npm">Npm</option>
+										<option value="Neta">Neta</option>
+										<option value="Ngamma">Ngamma</option>
+										<option value="Nkp">Nkp</option>
+										<option value="Nkm">Nkm</option>
+										<option value="Nks">Nks</option>
+										<option value="Npip">Npip</option>
+										<option value="Npim">Npim</option>
+										<option value="Npi0">Npi0</option>
+										<option value="BeamEnergy">BeamEnergy</option>
+										<option value="BeamVx">BeamVx</option>
+										<option value="BeamVy">BeamVy</option>
+										<option value="BeamVz">BeamVz</option>
+									</select>
+								</div>
+							</div>
+						</form>
+					</td>
+				</tr>
+				<tr>
+					<td>Graph</td>
+					<td>
+						<div id="echartArea" style="width:850px; height: 500px; padding: 30px 0px 20px 20px;"></div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+{% endblock %}

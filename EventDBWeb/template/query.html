@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block scriptBody %}
+	<script src="static/ui/echarts.common.min.js"></script>
+	<script src="static/ui/wonderland.js"></script>
+	<script>
+		function queryHistory(tablename, queryString, eventCount, timeCost){
+			var now = new Date();
+			layui.data('queryHistory', {
+				key: now.getTime().toString(),
+				value: {
+					'tablename': tablename,
+					'queryString': queryString,
+					'eventCount': eventCount,
+					'time': now.toLocaleString(),
+					'timeCost': timeCost
+				}
+			})
+		}
+		layui.use(['layer', 'form', 'element'], function () {
+			var layer = layui.layer,
+				form = layui.form,
+				element = layui.element;
+		});
+		$(function () {
+			$('#queryString').text($.cookie('command'));
+			$('#queryTable').text($.cookie('tablename'))
+
+				var barOptionTemp = {
+					title: {
+						text: '查询结果在每个dst中的分布',
+						textStyle: {
+							fontSize: 14
+						}
+					},
+					tooltip: {
+					trigger: 'axis',
+					axisPointer: {
+						type: 'shadow'
+					}
+				},
+				grid: {
+					top: 60,
+					left: 5,
+					right: 60,
+					bottom: 20,
+					containLabel: true
+				},
+				dataZoom: [{type: 'inside'}],
+				xAxis: [
+					{
+						type: 'category',
+						axisTick: {
+							alignWithLabel: true
+						},
+						name: '文件名'
+					}
+				],
+				yAxis: [
+					{
+						type: 'value',
+						name: '事例数'
+					}
+				]
+			};
+			var runsChart = echarts.init(document.getElementById('echartArea'), 'wonderland');
+			function loadRunsChart() {
+				var barOption = $.extend(true, {}, barOptionTemp)
+				runsChart.showLoading();
+				$.ajax({
+					type: 'get',
+					url: '/', 
+					data: {
+						'tablename': $.cookie('tablename'),
+						'command': $.cookie('command')
+					},
+					dataType: 'json',
+					success: function (data) {
+						console.log(data);
+						$('#costTime').text(data.time_cost + 's');
+						$('#eventCount').text('搜索' + data.total_event + '事例, 返回'+ data.count + '事例');
+						var result = data.result,
+							xval = [],
+							countdata = []
+						barOption.series = []
+						dstFileCount = 0;
+						for (var key in result) {
+							xval.push(key);
+							countdata.push(result[key]);
+							dstFileCount++;
+						}
+						$('#dstFileCount').text(dstFileCount);
+						barOption.series.push({
+							type: 'bar',
+							barWidth: '50%',
+							data: countdata
+						});
+						barOption.xAxis[0].data = xval;
+						runsChart.hideLoading();
+						runsChart.setOption(barOption);
+						fileName = data.save_path.split('/').pop();
+						$('#revertIndex').attr('href', data.save_path).attr('download', fileName);
+						$('#fileSaveName').text(fileName).attr('href', data.save_path);
+						if($.cookie('queryFromHistory') == "false"){
+							$.cookie('queryFromHistory', true);
+							queryHistory($.cookie('tablename'), $.cookie('command'), data.count, data.time_cost);
+						}
+					},
+					error: function(err){
+						runsChart.hideLoading();
+						console.log('fail:', err);
+					}
+				});
+			}
+			loadRunsChart();
+		});
+	</script>
+{% endblock %}
+
+{% block mainBody %}
+	<div class="layui-container" style="padding-bottom: 50px;">
+		<table class="layui-table">
+			<thead>
+				<tr>
+					<th width="100">项目</th>
+					<th>值</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>数据表</td>
+					<td id="queryTable"></td>
+				</tr>
+				<tr>
+					<td>查询命令</td>
+					<td id="queryString"></td>
+				</tr>
+				<tr>
+					<td>查询时间</td>
+					<td id="costTime"></td>
+				</tr>
+				<tr>
+					<td>事例数</td>
+					<td id="eventCount"></td>
+				</tr>
+				<tr>
+					<td>dst文件数量</td>
+					<td id="dstFileCount"></td>
+				</tr>
+				<tr>
+					<td>Graph</td>
+					<td>
+						<div id="echartArea" style="width:850px; height: 450px; padding: 30px 0px 20px 20px;"></div>
+					</td>
+				</tr>
+				<tr>
+					<td>事例索引</td>
+					<td>
+						<a href="" id="revertIndex" class="layui-btn" download="">json文件下载</a>
+						<a href="" target="_blank" id="fileSaveName" style="text-decoration:underline"></a>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+{% endblock %}

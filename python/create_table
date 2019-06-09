@@ -1,0 +1,32 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+import ConfigParser
+from optparse import OptionParser
+import sys
+import os
+import ROOT
+import struct
+import happybase
+from datetime import datetime,timedelta
+#加载配置信息
+config = ConfigParser.ConfigParser()
+config.readfp(open('./config.ini','r'))
+#hbase信息
+hbase_host = config.get('DB','host')
+hbase_port = int(config.get('DB', 'port'))
+table_prefix = config.get('DB','table_prefix')
+table_prefix_separator = config.get('DB','table_prefix_separator')
+hbase_timeout = int(config.get('DB','timeout'))
+#hdfs信息
+hdfs_host = config.get('HDFS','host')
+hdfs_port = int(config.get('HDFS','port'))
+hdfs_user = config.get('HDFS', 'user')
+eventdb_dir = config.get('HDFS','eventdb_dir')
+
+new_table = sys.argv[1]
+
+conn = happybase.Connection(host = hbase_host, port = hbase_port, table_prefix = table_prefix, table_prefix_separator = table_prefix_separator)
+conn.create_table(new_table, {'data': dict(max_versions = 1)})
+
+print "Connect to HBase. table '%s' has been created."%(new_table)

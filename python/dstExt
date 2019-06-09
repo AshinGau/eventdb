@@ -1,0 +1,101 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+import ROOT
+import sys
+from datetime import datetime
+import json
+import os
+import ConfigParser
+from optparse import OptionParser
+
+def LoadPathInfo():
+	config = ConfigParser.ConfigParser()
+	config.readfp(open('/afs/ihep.ac.cn/soft/common/EventDB/command_tools/CLIToolSet/config.ini','r'))
+	DST_ROOT_PATH = config.get('DST','dst_root_path')
+	GEN_DST_PATH = config.get('DST','gen_dst_path')
+	ROOT_Library_PATH = config.get('ROOT','root_lib_path')
+	return DST_ROOT_PATH, GEN_DST_PATH, ROOT_Library_PATH
+
+def GetEntries(file_array, dst_root_path):
+	dst_entries_num = []
+	for each_file in file_array:
+                each_file = each_file.replace("'","09psip_stream001_").replace("root","dst")
+		f = ROOT.TFile(dst_root_path + each_file)
+		t = f.Get("Event")
+		each_entries = t.GetEntries()
+		dst_entries_num.append(each_entries)
+	return dst_entries_num
+
+def DstExtractor(jsonFilePath, DST_ROOT_PATH, GEN_DST_PATH, ROOT_Library_PATH):
+	json_file_path = jsonFilePath
+	gen_dst_path = GEN_DST_PATH
+	dst_root_path = DST_ROOT_PATH
+	root_lib_path = ROOT_Library_PATH
+	ROOT.gSystem.Load(root_lib_path)
+
+	os.chdir(os.getcwd())
+
+	start_time = datetime.now()
+	with open(json_file_path, 'r') as f:
+		index_obj = json.load(f)
+	file_array = sorted(index_obj.keys())
+
+	dst_entries_num = GetEntries(file_array, dst_root_path)
+
+	# ROOT.gSystem.Load(root_lib_path)
+	old_chain = ROOT.TChain("Event")
+
+	for each_file in file_array:
+		print each_file
+                each_file = each_file.replace("'","09psip_stream001_").replace("root","dst")
+		old_chain.AddFile(dst_root_path + each_file)
+
+	new_dst_filename = jsonFilePath.split('/')[-1] + (str)(datetime.now().__str__().replace(":",'-') + ".dst")
+
+	new_file = ROOT.TFile(new_dst_filename,"recreate")
+	new_tree = old_chain.CloneTree(0)
+
+	count = 0;
+	file_handling = 0;
+	dst_file_index = -1;
+	chain_index = 0;
+
+	for each_dst_file in file_array:
+		dst_file_index += 1
+		if(dst_file_index >= 1):
+			chain_index += dst_entries_num[dst_file_index-1]
+
+		this_file_event = index_obj[each_dst_file]
+
+		for each_event in this_file_event:
+			print count
+			count += 1
+			old_chain.GetEntry(each_event + chain_index)
+			new_tree.Fill()
+
+		file_handling += 1
+
+	new_tree.Write()
+	end_time = datetime.now()
+	time_cost = (end_time - start_time).total_seconds()
+
+	print(".....................................................")
+	print(new_dst_filename + "created.")
+	print("Processed " + file_handling.__str__() + " files and " + "cloned " + count.__str__() + " event(s) in " + time_cost.__str__() + " seconds.")
+
+if __name__ == '__main__':
+	usage = "Usage: %prog [option] arg1"
+	parser = OptionParser(usage)
+	parser.add_option("-f", "--file", dest = "jsonFileName", action = "store", help = "read event info from the json file", metavar = "FILE")
+	
+	(option, args) = parser.parse_args()
+
+	jsonFileName = option.jsonFileName
+	print(type(jsonFileName))
+	print(os.getcwd())
+	print(jsonFileName)
+
+	DST_ROOT_PATH, GEN_DST_PATH, ROOT_Library_PATH = LoadPathInfo()
+
+	DstExtractor(jsonFileName, DST_ROOT_PATH, GEN_DST_PATH, ROOT_Library_PATH)

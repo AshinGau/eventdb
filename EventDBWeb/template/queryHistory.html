@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block scriptBody %}
+	<script>
+		function reloadRunAdd(table) {
+			var dataarr = [];
+			var historyData = layui.data('queryHistory');
+			for (var key in historyData)
+				dataarr.push(historyData[key]);
+			table.reload('queryHistoryTable', {
+				'data': dataarr
+			});
+		};
+		layui.use(['layer', 'form', 'element', 'table'], function () {
+			var layer = layui.layer,
+				form = layui.form,
+				element = layui.element,
+				table = layui.table;
+			reloadRunAdd(table);
+			table.on('tool(queryHistoryTable)', function (e) {
+				$.cookie('tablename', e.data.tablename);
+				$.cookie('command', e.data.queryString);
+				$.cookie('queryFromHistory', true);
+				location.href = 'query';
+			});
+		});
+	</script>
+{% endblock %}
+
+{% block mainBody %}
+	<div class="layui-container" style="padding: 20px 0px 40px 0px;">
+		<div style="width: 1084px; margin: auto;">
+			<table class="layui-table" lay-data="{page:false, id:'queryHistoryTable'}" lay-filter="queryHistoryTable">
+				<thead>
+					<tr>
+						<th lay-data="{field:'time', width:200}">查询历史</th>
+						<th lay-data="{field:'tablename', width:180}">数据表</th>
+						<th lay-data="{field:'queryString', width:360}">查询条件</th>
+						<th lay-data="{field:'eventCount', width:130}">返回事例数</th>
+						<th lay-data="{field:'timeCost', width:130}">查询时间(s)</th>
+						<th lay-data="{width:77, toolbar:'#queryHistoryTableTool'}">操作</th>
+					</tr>
+				</thead>
+			</table>
+			<script type="text/html" id="queryHistoryTableTool">
+				<a class="layui-btn layui-btn-primary layui-btn-mini" lay-event="detail">查看</a>
+			</script>
+		</div>
+	</div>
+{% endblock %}

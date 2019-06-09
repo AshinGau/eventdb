@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+	<title> 事例数据库EventDB - 面向高能物理的大数据管理系统</title>
+	<link rel="stylesheet" href="static/layui/css/layui.css">
+	<link rel="stylesheet" href="static/ui/global.css">
+	<script src="static/layui/layui.js"></script>
+	<script src="static/ui/jquery-3.2.1.min.js"></script>
+	<script src="static/ui/jquery.cookie.min.js"></script>
+</head>
+
+<body>
+	<script src="static/layui/layui.js"></script>
+	{% block scriptBody %}
+	{% endblock %}
+	<div class="layui-header header header-index">
+		<div class="layui-main layui-row">
+			<a href="index" class="logo ff-en"><span><span class="tc-primary">E</span>vent<span class="tc-primary">D</span>B</span></a>
+			<form class="layui-form" id="searchInfo" action="">
+				<input type="text" placeholder="搜索数据表或run号" value="" class="layui-input">
+			</form>
+			<ul class="layui-nav" lay-filter="">
+				<li class="layui-nav-item">
+					<a href="index">首页</a>
+				</li>
+				<li class="layui-nav-item">
+					<a href="viewrun">查看RUN</a>
+				</li>
+				<li class="layui-nav-item">
+					<a href="queryHistory">查询历史</a>
+				</li>
+				<li class="layui-nav-item">
+					<a href="javascript:;">项目拓展</a>
+					<dl class="layui-nav-child">
+						<dd>
+							<a href="fits">Fits数据</a>
+						</dd>
+						<dd>
+							<a href="rootOperator">Root算子</a>
+						</dd>
+					</dl>
+				</li>
+			</ul>
+		</div>
+	</div>
+	{% block mainBody %}
+	{% endblock %}
+	<div class="footer">
+		<p>© 2017
+			<a href="">xjtuosv.com</a> XJTU OSV EventDB</p>
+	</div>
+</body>
+
+</html>

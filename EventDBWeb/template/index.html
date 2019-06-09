@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block scriptBody %}
+	<script>
+		layui.use(['layer', 'form', 'element'], function () {
+			var layer = layui.layer,
+				form = layui.form,
+				element = layui.element;
+		});
+		$(function(){
+			$('#searchInput').width($('#searchCondition').width() - 175).bind('keydown', function(e){
+				if(e.keyCode == '13'){
+					var tablename = $('#tablename').val(),
+						command = $('#searchInput').val();
+					$.cookie('tablename', tablename);
+					$.cookie('command', command);
+					$.cookie('queryFromHistory', false);
+					$('#searchCommand').submit();
+				}
+			});
+			$('.layui-form-item.form-inline input').focus(function(){
+				$('#searchCondition').addClass('focus')
+			}).blur(function(){
+				$('#searchCondition').removeClass('focus')
+			});
+		});
+	</script>
+{% endblock %}
+
+{% block mainBody %}
+	<div class="layui-container">
+		<div class="layui-row" style="text-align: center; color:#666; margin-top: 120px;">
+			<p class="ff-en"  style="font-size: 90px;">
+				<span><span class="tc-primary">E</span>vent<span class="tc-primary">D</span>B</span>
+				<i class="layui-icon logo-animation" style="color:#666; font-size: 90px; position: absolute;">&#xe62e;</i>
+			</p>
+			<p style="font-size: 16px; margin-top: -20px; text-indent: 90px;" class="tc-primary">面向高能物理的大数据管理系统</p>
+		</div>
+		<div style="height: 30px;"></div>
+		<div class="layui-row">
+			<div class="layui-col-xs8 layui-col-xs-offset2">
+				<form class="layui-form" action="query" id="searchCommand">
+					<div class="layui-form-item form-inline" id="searchCondition">
+						<div class="layui-input-inline" style="width: 175px; z-index: 2; position: relative;">
+							<select name="tablename" id="tablename" lay-verify="required">
+								<option value="702p01-besfs3">702p01-besfs3</option>
+								<option value="702-1-besfs">702-1-besfs</option>
+								<option value="665p01-bes3fs-2175">665p01-bes3fs-2175</option>
+								<option value="664-1-bes3fs">664-1-bes3fs</option>
+								<option value="664-1-besfs2-jpsi">664-1-besfs2-jpsi</option>
+								<option value="664p03-bes3fs-psip">664p03-bes3fs-psip</option>
+							</select>
+						</div>
+						<div class="layui-input-inline">
+							<input type="text" name="command" required="" lay-verify="required" placeholder="请输入查询条件" autocomplete="true" class="layui-input" id="searchInput">
+						</div>
+						<i class="layui-icon input-icon">&#xe615;</i>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+{% endblock %}

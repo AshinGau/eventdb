@@ -1,0 +1,182 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+import ConfigParser
+from optparse import OptionParser
+import os
+import csv
+import ROOT
+import struct
+from datetime import datetime,timedelta
+from ctypes import cdll
+from ctypes.util import find_library
+import ctypes
+import json
+import sys
+from multiprocessing import Pool, TimeoutError
+import psutil
+from ctypes import cast
+
+#加载配置信息
+config = ConfigParser.ConfigParser()
+config.readfp(open('./config.ini','r'))
+#hbase信息
+hbase_host = config.get('DB','host')
+hbase_port = int(config.get('DB', 'port'))
+table_prefix = config.get('DB','table_prefix')
+table_prefix_separator = config.get('DB','table_prefix_separator')
+hbase_timeout = int(config.get('DB','timeout'))
+#hdfs信息
+hdfs_host = config.get('HDFS','host')
+hdfs_port = int(config.get('HDFS','port'))
+hdfs_user = config.get('HDFS', 'user')
+eventdb_dir = config.get('HDFS','eventdb_dir')
+#加载TypeSer.so
+double_lib_path = config.get('DOUBLE','double_lib_path')
+#speedup
+processes = int(config.get('SPEEDUP', 'processes'))
+
+c_lib=cdll.LoadLibrary(double_lib_path)
+c_lib.DoubleS.restype = ctypes.c_void_p
+c_lib.DoubleS.argtypes=[ctypes.c_double]
+c_lib.IntS.argtypes=[ctypes.c_int]
+c_lib.IntS.restype = ctypes.c_void_p
+
+libc = cdll.LoadLibrary(find_library("c"))
+libc.free.argtypes = [ctypes.c_void_p]
+
+folder = sys.argv[1]
+wdir = sys.argv[2]
+
+def get_info(info):
+	return datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ": " + info + ", process id " + os.getpid().__str__() + ", Occupied memory " + (psutil.Process(os.getpid()).memory_info()[0]/1024/1024).__str__() + "M"
+
+def run_dict(mp, rowkey, fileName, entryID):
+	if rowkey in mp:
+		if fileName in mp[rowkey]:
+			mp[rowkey][fileName].append(entryID)
+		else:
+			mp[rowkey][fileName] = [entryID]
+	else:
+		mp[rowkey] = {}
+		mp[rowkey][fileName] = [entryID]
+
+def genRun(walker):
+	root, dir, filelist = walker
+	runmp = {}
+	run_name = root.split('/')[-1]
+	if filelist:
+		print get_info("Start to analyze run-" + run_name)
+		for file in filelist:
+			current_file = os.path.join(root, file)
+			start_time = datetime.now()
+
+			f = ROOT.TFile(current_file)
+			t = f.Get("ntTAG")
+			filename = file.__str__()
+
+			num_total_entries = t.GetEntries()
+			for each in range(num_total_entries):
+				t.GetEntry(each)
+				outrunno=t.runNo.__str__()
+				outevtno=t.evtNo.__str__()
+				outtracks=c_lib.IntS(t.NTracks)
+				outshowes=c_lib.IntS(t.NShowes)
+				outnlambda= c_lib.IntS(t.Nlambda)
+				outalambda=c_lib.IntS(t.Nalambda)
+				outmup=c_lib.IntS(t.Nmup)
+				outmum=c_lib.IntS(t.Nmum)
+				outep=c_lib.IntS(t.Nep)
+				outem=c_lib.IntS(t.Nem)
+				outpp=c_lib.IntS(t.Npp)
+				outpm=c_lib.IntS(t.Npm)
+				outeta=c_lib.IntS(t.Neta)
+				outgamma=c_lib.IntS(t.Ngamma)
+				outkp=c_lib.IntS(t.Nkp)
+				outkm=c_lib.IntS(t.Nkm)
+				outks=c_lib.IntS(t.Nks)
+				outpip=c_lib.IntS(t.Npip)
+				outpim=c_lib.IntS(t.Npim)
+				outpi0=c_lib.IntS(t.Npi0)
+				outbm= c_lib.DoubleS(t.BeamEnergy)
+				outbx = c_lib.DoubleS(t.BeamVx)
+				outby= c_lib.DoubleS(t.BeamVy)
+				outbz= c_lib.DoubleS(t.BeamVz)
+				entryId = each
+
+				run_dict(runmp, outrunno+'#'+'NTracks'+'#'+cast(outtracks,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'NShowes'+'#'+cast(outshowes,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Nlambda'+'#'+cast(outnlambda,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Nalambda'+'#'+cast(outalambda,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Nmup'+'#'+cast(outmup,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Nmum'+'#'+cast(outmum,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Nep'+'#'+cast(outep,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Nem'+'#'+cast(outem,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Npp'+'#'+cast(outpp,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Npm'+'#'+cast(outpm,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Neta'+'#'+cast(outeta,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Ngamma'+'#'+cast(outgamma,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Nkp'+'#'+cast(outkp,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Nkm'+'#'+cast(outkm,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Nks'+'#'+cast(outks,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Npip'+'#'+cast(outpip,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Npim'+'#'+cast(outpim,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'Npi0'+'#'+cast(outpi0,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'BeamEnergy'+'#'+cast(outbm,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'BeamVx'+'#'+cast(outbx,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'BeamVy'+'#'+cast(outby,ctypes.c_char_p).value, filename, entryId)
+				run_dict(runmp, outrunno+'#'+'BeamVz'+'#'+cast(outbz,ctypes.c_char_p).value, filename, entryId)
+				
+				libc.free(outtracks)
+				libc.free(outshowes)
+				libc.free(outnlambda)
+				libc.free(outalambda)
+				libc.free(outmup)
+				libc.free(outmum)
+				libc.free(outep)
+				libc.free(outem)
+				libc.free(outpp)
+				libc.free(outpm)
+				libc.free(outeta)
+				libc.free(outgamma)
+				libc.free(outkp)
+				libc.free(outkm)
+				libc.free(outks)
+				libc.free(outpip)
+				libc.free(outpim)
+				libc.free(outpi0)
+				libc.free(outbm)
+				libc.free(outbx)
+				libc.free(outby)
+				libc.free(outbz)
+			f.Close()
+			print get_info("Finished to analyze " + current_file)
+
+		run_data_path = os.path.join(wdir + '/data', run_name + '.data')
+		run_data_file = open(run_data_path, 'w+')
+		run_csv_path = os.path.join(wdir + '/csv', run_name + '.csv')
+		run_csv_file = open(run_csv_path, 'w+')
+		offset = 0
+		for rowkey in runmp:
+			count = 0
+			lstobj = runmp[rowkey]
+			for fileName in lstobj:
+				count += len(lstobj[fileName])
+			#objstr = lstobj.__str__().replace(' ','')
+			objstr = json.dumps(lstobj).replace(' ', '')
+			objstr_len = len(objstr)
+			run_data_file.write(objstr)
+			run_csv_file.write('%s,%s,%d,%d,%d\n'%(rowkey.__str__(), run_name, offset, objstr_len, count))
+			offset += objstr_len
+		run_data_file.close()
+		run_csv_file.close()
+
+		print get_info("Finished to analyze run-" + run_name)
+		del runmp, f, t, num_total_entries
+
+if __name__ == '__main__':
+	pool = Pool(processes = processes)
+	for each in os.walk(folder):
+		pool.apply_async(genRun, (each,))
+	pool.close()
+	pool.join()

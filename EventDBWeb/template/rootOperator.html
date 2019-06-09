@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block scriptBody %}
+	<script>
+		layui.use(['layer', 'form', 'element'], function () {
+			var layer = layui.layer,
+				form = layui.form,
+				element = layui.element;
+		});
+	</script>
+{% endblock %}
+
+{% block mainBody %}
+	<div style="width:1250px; margin:auto;">
+		<iframe src="http://192.168.60.64:8082/OperatorLibrary_Web" style="width:1250px;height:780px;border:0px;">
+		</iframe>
+	</div>
+{% endblock %}
