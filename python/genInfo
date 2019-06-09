@@ -1,0 +1,11 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+import happybase
+from eventdb import events, db
+import sys
+
+# tableName
+run = db.runInfo(sys.argv[1])
+# root dir
+run.genInfo(sys.argv[2])
