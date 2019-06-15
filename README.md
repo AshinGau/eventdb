@@ -30,9 +30,9 @@ j脚本./python/genInfo析构元信息，命令格式：./genInfo 'table-name' '
 查询支持多个run查询，每个run号用逗号分隔。条件支持范围查询和交并运算。命令格式：./evtQuery -v 'hbase-table-name' -r 'runID' -q 'range(property1, min, max) && range(property2, min, max) || range(property3, min, max) ... ' -f 'output-file-name'
 
 ## 启动服务器
-cd EventDBWeb
-python ./manage.py runserver 0.0.0.0:8080
-查询事例数：localhost:8080/runInfo?op=totalEvents
-查询存储量：localhost:8080/runInfo?op=volume
-多维查询：localhost:8080/?tablename=${table-name}&command=${command}
-查询结果：localhost:8080/static/data/*.json
+cd EventDBWeb  
+python ./manage.py runserver 0.0.0.0:8080  
+查询事例数：localhost:8080/runInfo?op=totalEvents  
+查询存储量：localhost:8080/runInfo?op=volume  
+多维查询：localhost:8080/?tablename=${table-name}&command=${command}  
+查询结果：localhost:8080/static/data/*.json  
